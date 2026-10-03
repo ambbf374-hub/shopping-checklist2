@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>買い物チェックリスト</title>
+<style>
+:root{
+  --bg:#f7f1e9; --card:#fffdf9; --text:#403a35; --muted:#8c8278;
+  --accent:#c96f6f; --accent-light:#f4dede; --line:#e8ded3;
+  --green:#779b82; --shadow:0 6px 22px rgba(75,55,40,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
+.app{max-width:520px;margin:auto;min-height:100vh;padding-bottom:88px}
+header{padding:28px 20px 16px}
+h1{font-size:24px;margin:0 0 5px;font-weight:700}
+.subtitle{color:var(--muted);font-size:13px}
+.monthbar{display:flex;align-items:center;justify-content:space-between;margin:8px 20px 18px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
+.monthbar button{border:0;background:transparent;font-size:20px;color:var(--accent);padding:4px 10px}
+.month{font-weight:700;font-size:17px}
+.summary{margin:0 20px 18px;background:var(--accent);color:white;border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+.summary .big{font-size:28px;font-weight:700}
+.summary small{opacity:.9}
+.progress{height:7px;background:rgba(255,255,255,.35);border-radius:10px;margin-top:13px;overflow:hidden}
+.progress>div{height:100%;background:white;border-radius:10px}
+.section{padding:0 20px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px}
+.section-title h2{font-size:16px;margin:0}
+.link{border:0;background:none;color:var(--accent);font-size:13px}
+.item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:17px;padding:13px 14px;margin-bottom:9px;box-shadow:0 3px 12px rgba(75,55,40,.04)}
+.check{width:25px;height:25px;border:2px solid #d6c9bd;border-radius:8px;background:white;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.check.done{background:var(--green);border-color:var(--green);color:white}
+.check.done:after{content:"✓";font-size:16px}
+.info{flex:1;min-width:0}
+.name{font-weight:600;font-size:15px}
+.meta{font-size:12px;color:var(--muted);margin-top:3px}
+.qty{font-weight:700;font-size:14px;color:var(--accent);white-space:nowrap}
+.empty{padding:22px;text-align:center;color:var(--muted);font-size:13px;background:var(--card);border-radius:16px;border:1px dashed var(--line)}
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,253,249,.96);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:10}
+.navin{max-width:520px;width:100%;display:flex;justify-content:space-around;padding:9px 8px calc(9px + env(safe-area-inset-bottom))}
+.navbtn{border:0;background:none;color:var(--muted);font-size:11px;padding:5px 20px}
+.navbtn.active{color:var(--accent);font-weight:700}
+.navicon{font-size:20px;display:block;margin-bottom:2px}
+.modal{position:fixed;inset:0;background:rgba(50,40,32,.35);display:none;align-items:flex-end;z-index:20}
+.modal.show{display:flex}
+.sheet{width:100%;max-width:520px;margin:auto;background:var(--card);border-radius:24px 24px 0 0;padding:22px 20px calc(25px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.sheet h2{margin:0 0 18px;font-size:19px}
+label{display:block;font-size:13px;color:var(--muted);margin:13px 0 6px}
+input,select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:white;font-size:15px;color:var(--text)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.primary{width:100%;border:0;border-radius:13px;padding:13px;background:var(--accent);color:white;font-weight:700;font-size:15px;margin-top:18px}
+.secondary{width:100%;border:1px solid var(--line);border-radius:13px;padding:12px;background:white;color:var(--text);font-size:14px;margin-top:9px}
+.delete{border:0;background:none;color:#b45e5e;font-size:12px;margin-top:12px}
+.note{font-size:12px;color:var(--muted);line-height:1.6;margin:14px 2px}
+.category-title{font-size:13px;font-weight:700;color:var(--muted);margin:16px 2px 8px;display:flex;align-items:center;gap:6px}
+.category-title:first-child{margin-top:4px}
+.category-badge{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--accent-light);color:var(--accent);margin-top:5px}
+.toast{position:fixed;left:50%;bottom:85px;transform:translateX(-50%);background:#403a35;color:white;padding:10px 15px;border-radius:20px;font-size:12px;display:none;z-index:30}
+
+/* compact list */
+.item{padding:11px 12px;min-height:58px;margin-bottom:7px;border-radius:18px;gap:9px}
+.check{width:31px;height:31px;min-width:31px;border-radius:10px}
+.check.done:after{font-size:20px}
+.info{min-width:0;display:flex;align-items:center;gap:8px;flex:1}
+.name{font-size:15px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.meta{font-size:11px;line-height:1.2;white-space:nowrap;margin:0;color:var(--muted)}
+.qty{font-size:14px;min-width:34px;text-align:right}
+.category-title{font-size:12px;margin:11px 2px 6px}
+
+
+/* extra compact table-style view */
+.section{margin-top:14px}
+.section-title{margin-bottom:6px}
+.item{
+  padding:7px 8px !important;
+  min-height:44px !important;
+  margin-bottom:2px !important;
+  border-radius:9px !important;
+  gap:7px !important;
+}
+.check{
+  width:26px !important;height:26px !important;min-width:26px !important;
+  border-radius:7px !important;
+}
+.check.done:after{font-size:17px !important}
+.info{gap:5px !important}
+.name{font-size:14px !important}
+.meta{font-size:10px !important}
+.qty{font-size:13px !important;min-width:30px !important}
+.category-title{
+  font-size:11px !important;
+  margin:8px 2px 3px !important;
+}
+.card{padding:10px !important}
+.hero{padding:14px 16px !important;border-radius:20px !important}
+.hero .big{font-size:30px !important;line-height:1 !important}
+.hero .sub{font-size:12px !important;margin-top:3px !important}
+.progress{height:6px !important;margin-top:8px !important}
+
+
+/* smaller month selector + remaining-check summary */
+.monthbar{
+  padding:5px 8px !important;
+  min-height:34px !important;
+  border-radius:10px !important;
+  margin-bottom:7px !important;
+}
+.monthbar button{
+  width:28px !important;
+  height:28px !important;
+  font-size:14px !important;
+}
+#monthLabel{
+  font-size:13px !important;
+}
+.hero{
+  padding:9px 12px !important;
+  border-radius:14px !important;
+  margin-bottom:8px !important;
+}
+.hero .big{
+  font-size:22px !important;
+  line-height:1 !important;
+}
+.hero .sub{
+  font-size:10px !important;
+  margin-top:2px !important;
+}
+.progress{
+  height:4px !important;
+  margin-top:6px !important;
+}
+
+
+/* remaining-check box: about 2/3 height */
+.hero{
+  padding:5px 10px !important;
+  border-radius:12px !important;
+  margin-bottom:7px !important;
+}
+.hero .big{
+  font-size:19px !important;
+  line-height:.95 !important;
+}
+.hero .sub{
+  font-size:9px !important;
+  line-height:1 !important;
+  margin-top:1px !important;
+}
+.progress{
+  height:3px !important;
+  margin-top:4px !important;
+}
+
+
+/* remaining-check box: another ~2/3 reduction */
+.hero{
+  padding:2px 8px !important;
+  border-radius:9px !important;
+  margin-bottom:5px !important;
+}
+.hero .big{
+  font-size:16px !important;
+  line-height:.9 !important;
+}
+.hero .sub{
+  font-size:8px !important;
+  line-height:.9 !important;
+  margin-top:0 !important;
+}
+.progress{
+  height:2px !important;
+  margin-top:2px !important;
+}
+
+
+/* final ultra-compact top area */
+.monthbar{
+  padding:3px 7px !important;
+  min-height:30px !important;
+  border-radius:9px !important;
+  margin-bottom:5px !important;
+}
+.monthbar button{
+  width:25px !important;
+  height:25px !important;
+  font-size:13px !important;
+}
+#monthLabel{font-size:12px !important}
+
+/* Make the remaining-check panel a thin one-line status bar */
+.hero{
+  padding:5px 9px 4px !important;
+  border-radius:11px !important;
+  margin-bottom:6px !important;
+  min-height:0 !important;
+}
+.hero .big{
+  display:inline !important;
+  font-size:16px !important;
+  line-height:1 !important;
+  margin:0 !important;
+}
+.hero .sub{
+  display:inline !important;
+  font-size:9px !important;
+  line-height:1 !important;
+  margin:0 0 0 7px !important;
+  white-space:nowrap !important;
+}
+.progress{
+  height:2px !important;
+  margin-top:4px !important;
+}
+.section{margin-top:10px !important}
+
+
+/* extra-small red summary panel */
+.hero{
+  padding:4px 10px !important;
+  min-height:0 !important;
+  height:auto !important;
+  border-radius:10px !important;
+  margin:5px 0 7px !important;
+}
+.hero .big{
+  font-size:15px !important;
+  line-height:18px !important;
+  margin:0 !important;
+}
+.hero .sub{
+  font-size:8px !important;
+  line-height:12px !important;
+  margin:1px 0 0 !important;
+}
+.progress{
+  height:2px !important;
+  margin-top:3px !important;
+}
+
+
+/* FIX: actual red remaining-check panel */
+.summary{
+  margin:0 20px 8px !important;
+  padding:7px 12px 6px !important;
+  border-radius:11px !important;
+  min-height:0 !important;
+}
+.summary > div:first-child{
+  display:inline !important;
+  font-size:12px !important;
+  line-height:18px !important;
+}
+.summary .big{
+  font-size:18px !important;
+  line-height:18px !important;
+}
+.summary small{
+  display:inline !important;
+  font-size:9px !important;
+  line-height:18px !important;
+  margin-left:7px !important;
+  white-space:nowrap !important;
+}
+.summary .progress{
+  height:2px !important;
+  margin-top:4px !important;
+}
+
+
+/* smaller product names */
+.item .name{
+  font-size:12px !important;
+  line-height:1.15 !important;
+  font-weight:700 !important;
+}
+
+
+/* tighter product rows */
+.item{
+  padding:4px 7px !important;
+  min-height:36px !important;
+  margin-bottom:1px !important;
+  gap:5px !important;
+  border-radius:7px !important;
+}
+.item .info{gap:3px !important}
+.item .name{
+  font-size:12px !important;
+  line-height:1.05 !important;
+  margin:0 !important;
+}
+.item .meta{
+  font-size:9px !important;
+  line-height:1 !important;
+  margin:0 !important;
+}
+.item .qty{font-size:12px !important}
+.check{
+  width:23px !important;
+  height:23px !important;
+  min-width:23px !important;
+  border-radius:6px !important;
+}
+.category-title{
+  margin:6px 2px 2px !important;
+}
+
+
+/* shopping planner */
+.shop-toolbar{display:flex;gap:5px;align-items:center;margin:4px 0 6px}
+.shop-toolbar button{border:1px solid var(--line);background:#fff;padding:5px 8px;border-radius:8px;font-size:10px;color:var(--muted)}
+.shop-toolbar button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.shop-group{font-size:11px;font-weight:700;color:var(--muted);margin:8px 2px 3px}
+.buy-row{display:grid;grid-template-columns:23px minmax(0,1fr) auto;align-items:center;gap:5px;padding:4px 7px;margin-bottom:1px;background:#fff;border:1px solid var(--line);border-radius:7px}
+.buy-row.purchased{opacity:.55}
+.buy-row.purchased .buy-name{text-decoration:line-through}
+.buy-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.buy-controls{display:flex;gap:3px;align-items:center}
+.buy-controls select,.buy-controls input{font-size:9px;padding:3px;border:1px solid var(--line);border-radius:5px;background:#fff;color:var(--muted);max-width:88px}
+.buy-controls input{width:92px}
+.buy-empty{font-size:11px;color:var(--muted);padding:10px;text-align:center}
+
+/* customization upgrade */
+.check.done{background:#d8d8d8 !important;border-color:#d8d8d8 !important}
+.master-tools{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}
+.master-tools button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 8px;font-size:10px;color:var(--muted)}
+.buy-extra{display:flex;gap:4px;align-items:center;margin-top:3px}
+.buy-extra input{font-size:9px;padding:3px 4px;border:1px solid var(--line);border-radius:5px;background:#fff}
+.buy-qty{width:42px}
+.buy-note{width:112px}
+
+.settings-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:50;overflow:auto;padding:24px 18px 90px}
+.settings-overlay.show{display:block}
+.settings-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.settings-head h2{font-size:20px;margin:0}
+.settings-close{border:0;background:#fff;border-radius:10px;padding:7px 10px;font-size:13px}
+.settings-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:12px}
+.settings-card h3{font-size:14px;margin:0 0 8px}
+.setting-row{display:flex;align-items:center;gap:5px;border-top:1px solid var(--line);padding:6px 0}
+.setting-row:first-of-type{border-top:0}
+.setting-row input{flex:1;min-width:0;border:1px solid var(--line);border-radius:7px;padding:6px;font-size:12px}
+.setting-row button,.setting-add{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 8px;font-size:10px}
+.setting-add{margin-top:7px;color:var(--accent)}
+.settings-tab{position:fixed;right:18px;bottom:18px;z-index:20;border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 13px;font-size:11px;color:var(--muted);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+.top-settings-btn{
+  border:0;background:transparent;color:var(--muted);
+  font-size:11px;padding:3px 4px;margin-left:5px;white-space:nowrap
+}
+
+/* shopping list: compact single-line controls */
+.buy-row{display:grid !important;grid-template-columns:26px minmax(0,1fr) !important;gap:5px !important;padding:6px 7px !important}
+.buy-row>div:nth-child(2){min-width:0}
+.buy-name{font-size:12px !important;line-height:1.1;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.buy-extra{display:grid !important;grid-template-columns:minmax(90px,1fr) 46px 46px 58px !important;gap:4px !important;margin:0 !important;align-items:center}
+.buy-extra .qty-wrap{display:flex;align-items:center;gap:2px;grid-column:2}
+.buy-extra .qty-wrap input{width:28px !important;min-width:0}
+.buy-extra input,.buy-extra select,.buy-extra button{height:27px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:9px;padding:2px 4px;min-width:0}
+.buy-extra select{width:100%;padding-right:2px}
+.note-btn{width:46px;padding:2px !important;color:var(--muted);grid-column:3}
+.note-btn.has-note{color:var(--accent);font-weight:700}
+.date-mini{width:58px !important;text-align:center;grid-column:4}
+.buy-controls{display:none !important}
+.shop-group{margin-top:7px !important;margin-bottom:2px !important}
+.icon-input{width:40px !important;flex:0 0 40px !important;text-align:center;font-size:16px !important}
+.setting-row .setting-name{flex:1}
+.note-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.22);z-index:80;align-items:center;justify-content:center;padding:20px}
+.note-overlay.show{display:flex}
+.note-card{width:min(340px,100%);background:#fff;border-radius:14px;padding:14px}
+.note-card h3{font-size:14px;margin:0 0 8px}
+.note-card textarea{width:100%;min-height:90px;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px}
+.note-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+.note-actions button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:6px 10px}
+
+.date-mode-row{grid-template-columns:minmax(110px,1fr) 48px 34px !important}
+.date-mode-row .buy-name{grid-column:1 !important}
+.date-mode-row .qty-wrap{grid-column:2 !important}
+.date-mode-row{grid-template-columns:minmax(90px,1fr) 44px 30px 30px !important}
+.date-mode-row .buy-name{grid-column:1 !important}
+.date-mode-row .qty-wrap{grid-column:2 !important}
+.date-mode-row .note-btn{grid-column:3 !important;width:30px !important}
+.note-btn{font-size:12px !important;width:30px !important;padding:1px !important}
+.store-btn{grid-column:4;width:30px;height:27px;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:12px;padding:1px;min-width:0}
+.store-btn.has-store{color:var(--accent)}
+.shop-category{font-size:10px;font-weight:700;color:var(--muted);margin:4px 5px 2px;padding-left:2px}
+.check-heading-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.remaining-pill{display:inline-flex;align-items:baseline;white-space:nowrap;background:var(--accent);color:#fff;border-radius:10px;padding:4px 9px;font-size:10px;font-weight:700}
+.remaining-pill .remaining-num{font-size:16px;margin:0 2px}
+
+.category-title{
+  cursor:pointer;justify-content:space-between !important;
+  background:rgba(255,255,255,.45);border-radius:7px;
+  padding:5px 7px !important;margin-top:7px !important;margin-bottom:3px !important
+}
+.category-title-left{display:flex;align-items:center;gap:5px;min-width:0}
+.category-remain{font-size:9px;font-weight:700;color:var(--accent);white-space:nowrap}
+.category-remain.complete{color:var(--muted)}
+.category-arrow{font-size:9px;color:var(--muted);margin-left:3px}
+.category-items.collapsed{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>買い物チェックリスト</h1>
+  <div class="subtitle">毎月の「そろそろ買う」を忘れないために</div>
+</header>
+
+<div class="monthbar">
+  <button onclick="changeMonth(-1)">‹</button>
+  <div class="month" id="monthLabel"></div>
+  <button onclick="changeMonth(1)">›</button>
+</div>
+
+<div class="summary" style="display:none !important">
+  <div><span class="big" id="remain">0</span> 個をチェック</div>
+  <small id="summaryText">今月の買い物を確認しましょう</small>
+  <div class="progress"><div id="progress"></div></div>
+</div>
+
+<div class="section">
+  <div class="section-title">
+    <div class="check-heading-row"><h2>今月のチェック</h2><div class="remaining-pill">残り<span id="remainingCount" class="remaining-num">0</span>個</div></div>
+    <button class="link" onclick="openAdd()">＋ 商品を追加</button><button class="top-settings-btn" onclick="openSettings()">⚙️ 設定</button>
+  </div>
+  <div id="checkList"></div>
+
+  <div class="section-title">
+    <h2>今月の買い物リスト</h2>
+  </div>
+  <div class="shop-toolbar">
+<button id="sortStore" class="active" onclick="setBuySort('store')">店舗別</button>
+<button id="sortDate" onclick="setBuySort('date')">日付別</button>
+</div><div id="buyList"></div>
+</div>
+</div>
+
+<nav><div class="navin">
+  <button class="navbtn active" onclick="scrollTop()"><span class="navicon">⌂</span>ホーム</button>
+  <button class="navbtn" onclick="openManage()"><span class="navicon">≡</span>商品一覧</button>
+</div></nav>
+
+<div class="modal" id="modal">
+ <div class="sheet">
+  <h2 id="modalTitle">商品を追加</h2>
+  <label>カテゴリー</label>
+  <select id="category"></select>
+  <label>商品名</label><input id="name" placeholder="例：トイレットペーパー">
+<label>いつも買う店舗</label><select id="store"></select>
+  <div class="row">
+   <div><label>必要な個数</label><input id="qty" type="number" min="1" value="1"></div>
+   <div><label>購入頻度</label>
+    <select id="freq">
+      <option value="1">毎月</option><option value="2">2か月に1回</option>
+      <option value="3">3か月に1回</option><option value="6">6か月に1回</option>
+    </select>
+   </div>
+  </div>
+  <div class="note">「必要な個数」は、その月に買う目安です。購入頻度に合わせて月ごとのチェック対象を自動で作ります。</div>
+  <button class="primary" onclick="saveItem()">保存する</button>
+  <button class="secondary" onclick="closeModal()">キャンセル</button>
+  <button class="delete" id="deleteBtn" onclick="deleteItem()" style="display:none">この商品を削除</button>
+ </div>
+</div>
+
+<div class="modal" id="manage">
+ <div class="sheet">
+  <h2>登録している商品</h2>
+  <div id="manageList"></div>
+  <button class="secondary" onclick="closeManage()">閉じる</button>
+ </div>
+</div>
+<div class="toast" id="toast"></div>
+
+
+
+<div id="settingsOverlay" class="settings-overlay">
+  <div class="settings-head"><h2>⚙️ 設定</h2><button class="settings-close" onclick="closeSettings()">閉じる</button></div>
+  <div class="settings-card">
+    <h3>カテゴリー管理</h3>
+    <div id="categorySettings"></div>
+    <button class="setting-add" onclick="addCategorySetting()">＋ カテゴリーを追加</button>
+  </div>
+  <div class="settings-card">
+    <h3>店舗管理</h3>
+    <div id="storeSettings"></div>
+    <button class="setting-add" onclick="addStoreSetting()">＋ 店舗を追加</button>
+  </div>
+</div>
+
+<div id="noteOverlay" class="note-overlay">
+<div class="note-card"><h3 id="noteTitle">コメント</h3><textarea id="noteText" placeholder="メモを入力"></textarea>
+<div class="note-actions"><button onclick="closeNote()">キャンセル</button><button onclick="saveNote()">保存</button></div></div></div>
+<script>
+const defaultItems=[
+ {id:1,name:"トイレットペーパー",qty:1,freq:1,category:"日用品"},
+ {id:2,name:"ティッシュ",qty:2,freq:1,category:"日用品"},
+ {id:3,name:"洗濯洗剤",qty:1,freq:1,category:"日用品"},
+ {id:4,name:"食器用洗剤",qty:1,freq:1,category:"日用品"},
+ {id:5,name:"シャンプー",qty:1,freq:2,category:"バス・ヘアケア"},
+ {id:6,name:"歯ブラシ",qty:2,freq:3,category:"日用品"}
+];
+let items=JSON.parse(localStorage.getItem("dailyItems")||"null")||defaultItems;
+items=items.map(x=>({...x,category:x.category||"日用品",store:x.store||"未設定"}));
+let checks=JSON.parse(localStorage.getItem("dailyChecks")||"{}");
+let purchaseState=JSON.parse(localStorage.getItem("purchaseState")||"{}");
+let buySort=localStorage.getItem("buySort")||"store";
+let categories=JSON.parse(localStorage.getItem("customCategories")||"null")||["日用品","化粧品・美容","バス・ヘアケア","子ども用品","その他"];
+let storeOptions=JSON.parse(localStorage.getItem("customStores")||"null")||["未設定","ドラッグストア","スーパー","ホームセンター","ネット通販","その他"];
+let categoryIcons=JSON.parse(localStorage.getItem("categoryIcons")||"null")||{"日用品":"🧻","化粧品・美容":"💄","バス・ヘアケア":"🛁","子ども用品":"🧒","その他":"📦"};
+let storeIcons=JSON.parse(localStorage.getItem("storeIcons")||"null")||{"未設定":"🏪","ドラッグストア":"🏪","スーパー":"🏪","ホームセンター":"🏪","ネット通販":"🏪","その他":"🏪"};
+
+function refreshMasterSelects(){
+ const c=document.getElementById("category"),s=document.getElementById("store");
+ if(c)c.innerHTML=categories.map(v=>`<option value="${esc(v)}">${categoryIcon(v)} ${esc(v)}</option>`).join("");
+ if(s)s.innerHTML=storeOptions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+}
+function editMaster(title,current,key,required){
+ const raw=prompt(title+"\\n1行に1つずつ入力してください。",current.join("\\n"));
+ if(raw===null)return current;
+ let arr=[...new Set(raw.split(/\\n/).map(v=>v.trim()).filter(Boolean))];
+ if(required&&!arr.includes(required))arr.unshift(required);
+ if(!arr.length){alert("1つ以上入力してください");return current}
+ localStorage.setItem(key,JSON.stringify(arr));return arr;
+}
+function manageCategories(){categories=editMaster("カテゴリを編集",categories,"customCategories");refreshMasterSelects();render()}
+function manageStores(){storeOptions=editMaster("店舗を編集",storeOptions,"customStores","未設定");refreshMasterSelects();render()}
+
+function purchaseKey(id){return key()+"-"+id}
+function getPurchase(id){const k=purchaseKey(id);if(!purchaseState[k])purchaseState[k]={done:false,date:"",store:(items.find(x=>x.id===id)||{}).store||"未設定",qty:(items.find(x=>x.id===id)||{}).qty||1,note:""};if(purchaseState[k].qty==null)purchaseState[k].qty=(items.find(x=>x.id===id)||{}).qty||1;if(purchaseState[k].note==null)purchaseState[k].note="";return purchaseState[k]}
+function savePurchase(){localStorage.setItem("purchaseState",JSON.stringify(purchaseState))}
+function setBuySort(v){buySort=v;localStorage.setItem("buySort",v);render()}
+function setPurchaseStore(id,v){getPurchase(id).store=v;savePurchase();render()}
+function setPurchaseDate(id,v){getPurchase(id).date=v;savePurchase();render()}
+function togglePurchased(id){const p=getPurchase(id);p.done=!p.done;savePurchase();render()}
+function setPurchaseQty(id,v){getPurchase(id).qty=Math.max(0,Number(v)||0);savePurchase()}
+function setPurchaseNote(id,v){getPurchase(id).note=v;savePurchase()}
+function formatMD(v){if(!v)return "日付";const a=v.split("-");return Number(a[1])+"/"+Number(a[2])}
+function openDatePicker(id){const e=document.getElementById("date-"+id);try{if(e.showPicker)e.showPicker();else e.click()}catch(_){e.click()}}
+let noteEditingId=null;
+function openNote(id){noteEditingId=id;const x=items.find(v=>v.id===id);document.getElementById("noteTitle").textContent=(x?x.name:"")+" のコメント";document.getElementById("noteText").value=getPurchase(id).note||"";document.getElementById("noteOverlay").classList.add("show")}
+function closeNote(){document.getElementById("noteOverlay").classList.remove("show");noteEditingId=null}
+function saveNote(){if(noteEditingId==null)return closeNote();setPurchaseNote(noteEditingId,document.getElementById("noteText").value);closeNote();render()}
+function storeButton(id){const p=getPurchase(id);return `<button class="store-btn ${p.store&&p.store!=="未設定"?"has-store":""}" onclick="cyclePurchaseStore(${id})" title="買う店舗を変更">🛒</button>`}
+function cyclePurchaseStore(id){const p=getPurchase(id);let i=storeOptions.indexOf(p.store||"未設定");p.store=storeOptions[(i+1+storeOptions.length)%storeOptions.length];savePurchase();render()}
+function buyRow(x){const p=getPurchase(x.id);if(buySort==="date"){return `<div class="buy-row ${p.done?"purchased":""}"><div class="check ${p.done?"done":""}" onclick="togglePurchased(${x.id})"></div><div><div class="buy-extra date-mode-row"><div class="buy-name">${esc(x.name)}</div><div class="qty-wrap"><input type="number" min="0" value="${p.qty}" onchange="setPurchaseQty(${x.id},this.value)"><span style="font-size:9px">個</span></div><button class="note-btn ${p.note?"has-note":""}" onclick="openNote(${x.id})">🗒️</button>${storeButton(x.id)}</div></div></div>`}return `<div class="buy-row ${p.done?"purchased":""}"><div class="check ${p.done?"done":""}" onclick="togglePurchased(${x.id})"></div><div><div class="buy-extra"><div class="buy-name" style="grid-column:1">${esc(x.name)}</div><div class="qty-wrap"><input type="number" min="0" value="${p.qty}" onchange="setPurchaseQty(${x.id},this.value)"><span style="font-size:9px">個</span></div><button class="note-btn ${p.note?"has-note":""}" onclick="openNote(${x.id})">🗒️</button><label class="date-mini" style="position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer">${formatMD(p.date)}<input id="date-${x.id}" type="date" value="${p.date||""}" onchange="setPurchaseDate(${x.id},this.value)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div></div>`}
+function renderBuyList(buy){const el=document.getElementById("buyList");const a=document.getElementById("sortStore"),b=document.getElementById("sortDate");if(a){a.classList.toggle("active",buySort==="store");b.classList.toggle("active",buySort==="date")}if(!buy.length){el.innerHTML='<div class="buy-empty">チェックした商品がここに表示されます</div>';return}let groups={};buy.forEach(x=>{const p=getPurchase(x.id);const g=buySort==="store"?(p.store||"未設定"):(p.date||"日付未設定");(groups[g]||(groups[g]=[])).push(x)});const keys=Object.keys(groups).sort((a,b)=>{if(buySort==="date"){if(a==="日付未設定")return 1;if(b==="日付未設定")return -1}if(buySort==="store"){if(a==="未設定")return 1;if(b==="未設定")return -1}return a.localeCompare(b,"ja")});el.innerHTML=keys.map(g=>{const xs=groups[g];if(buySort!=="store")return `<div class="shop-group">📅 ${g!=="日付未設定"?formatMD(g):esc(g)}</div>${xs.sort((x,y)=>Number(getPurchase(x.id).done)-Number(getPurchase(y.id).done)).map(buyRow).join("")}`;let cats={};xs.forEach(x=>(cats[x.category||"その他"]||(cats[x.category||"その他"]=[])).push(x));const catKeys=categories.filter(c=>cats[c]).concat(Object.keys(cats).filter(c=>!categories.includes(c)));return `<div class="shop-group">${storeIcon(g)} ${esc(g)}</div>`+catKeys.map(c=>`<div class="shop-category">${categoryIcon(c)} ${esc(c)}</div>${cats[c].sort((x,y)=>Number(getPurchase(x.id).done)-Number(getPurchase(y.id).done)).map(buyRow).join("")}`).join("")}).join("")}
+
+let viewDate=new Date(); viewDate.setDate(1);
+let editingId=null;
+
+function key(){return viewDate.getFullYear()+"-"+(viewDate.getMonth()+1)}
+function save(){localStorage.setItem("dailyItems",JSON.stringify(items));localStorage.setItem("dailyChecks",JSON.stringify(checks))}
+function applicable(item){
+ const m=viewDate.getMonth()+1;
+ return ((m-1)%item.freq===0);
+}
+function categoryIcon(c){return categoryIcons[c]||"🏷️"}
+function storeIcon(s){return storeIcons[s]||"🏪"}
+let collapsedCategories=JSON.parse(localStorage.getItem("collapsedCategories")||"{}");
+function categoryCollapseKey(cat){return key()+"::"+cat}
+function toggleCategory(cat){
+ const k=categoryCollapseKey(cat);
+ collapsedCategories[k]=!collapsedCategories[k];
+ localStorage.setItem("collapsedCategories",JSON.stringify(collapsedCategories));
+ render();
+}
+function groupedHtml(list, mode){
+ const order=[...new Set([...categories,...list.map(x=>x.category||"日用品")])];
+ return order.map(cat=>{
+   const xs=list.filter(x=>(x.category||"日用品")===cat);
+   if(!xs.length)return "";
+   const remaining=xs.filter(x=>!checks[key()+"-"+x.id]).length;
+   const collapsed=!!collapsedCategories[categoryCollapseKey(cat)];
+   const rows=xs.map(x=>{
+     const d=!!checks[key()+"-"+x.id];
+     if(mode==="check"){
+       return `<div class="item"><div class="check ${d?"done":""}" onclick="toggle(${x.id})"></div><div class="info"><div class="name">${esc(x.name)}</div><div class="meta">購入頻度：${freqText(x.freq)}</div></div><div class="qty">${x.qty}個</div></div>`;
+     }
+     return `<div class="item"><div class="info"><div class="name">${esc(x.name)}</div><div class="meta">購入予定</div></div><div class="qty">${x.qty}個</div></div>`;
+   }).join("");
+   const status=remaining===0?`<span class="category-remain complete">✓ 完了</span>`:`<span class="category-remain">残り${remaining}個</span>`;
+   return `<div class="category-title" onclick="toggleCategory('${esc(cat).replace(/'/g,"&#39;")}')"><span class="category-title-left">${categoryIcon(cat)} ${esc(cat)}</span><span>${status}<span class="category-arrow">${collapsed?"▼":"▲"}</span></span></div><div class="category-items ${collapsed?"collapsed":""}">${rows}</div>`;
+ }).join("");
+}
+function render(){
+ document.getElementById("monthLabel").textContent=viewDate.getFullYear()+"年"+(viewDate.getMonth()+1)+"月";
+ const list=items.filter(applicable);
+ const done=list.filter(x=>checks[key()+"-"+x.id]).length; const remaining=list.length-done; const rc=document.getElementById("remainingCount"); if(rc)rc.textContent=remaining;
+ document.getElementById("remain").textContent=list.length-done;
+ document.getElementById("summaryText").textContent=list.length===0?"商品を登録してください":(done===list.length?"今月の買い物チェック完了です":"チェックして、買うものを決めましょう");
+ document.getElementById("progress").style.width=(list.length?done/list.length*100:0)+"%";
+ document.getElementById("checkList").innerHTML=list.length?groupedHtml(list,"check"):`<div class="empty">今月のチェック対象はありません</div>`;
+ const buy=list.filter(x=>checks[key()+"-"+x.id]);
+ renderBuyList(buy);
+}
+function toggle(id){const k=key()+"-"+id;checks[k]=!checks[k];save();render()}
+function changeMonth(n){viewDate.setMonth(viewDate.getMonth()+n);render()}
+function freqText(f){return f==1?"毎月":f+"か月に1回"}
+function openAdd(){
+ editingId=null; document.getElementById("modalTitle").textContent="商品を追加";refreshMasterSelects();
+ document.getElementById("category").value="日用品";document.getElementById("name").value="";document.getElementById("store").value="未設定";document.getElementById("qty").value=1;document.getElementById("freq").value=1;
+ document.getElementById("deleteBtn").style.display="none";document.getElementById("modal").classList.add("show");
+}
+function edit(id){
+ const x=items.find(i=>i.id===id); if(!x)return;
+ editingId=id;document.getElementById("modalTitle").textContent="商品を編集";refreshMasterSelects();
+ document.getElementById("category").value=x.category||"日用品";document.getElementById("name").value=x.name;document.getElementById("store").value=x.store||"未設定";document.getElementById("qty").value=x.qty;document.getElementById("freq").value=x.freq;
+ document.getElementById("deleteBtn").style.display="block";document.getElementById("manage").classList.remove("show");document.getElementById("modal").classList.add("show");
+}
+function saveItem(){
+ const category=document.getElementById("category").value,store=document.getElementById("store").value,name=document.getElementById("name").value.trim(),qty=Math.max(1,parseInt(document.getElementById("qty").value)||1),freq=parseInt(document.getElementById("freq").value);
+ if(!name){showToast("商品名を入力してください");return}
+ if(editingId){Object.assign(items.find(i=>i.id===editingId),{name,qty,freq,category,store})}else{items.push({id:Date.now(),name,qty,freq,category,store})}
+ save();closeModal();render();showToast("保存しました")
+}
+function deleteItem(){
+ items=items.filter(x=>x.id!==editingId);save();closeModal();render();showToast("削除しました")
+}
+function closeModal(){document.getElementById("modal").classList.remove("show")}
+function openManage(){
+ document.getElementById("manageList").innerHTML=items.map(x=>`<div class="item" onclick="edit(${x.id})"><div class="info"><div class="name">${esc(x.name)}</div><div class="meta">${categoryIcon(x.category||"日用品")} ${esc(x.category||"日用品")} ・ ${freqText(x.freq)}・${x.qty}個</div></div><div class="qty">編集</div></div>`).join("");
+ document.getElementById("manage").classList.add("show")
+}
+function closeManage(){document.getElementById("manage").classList.remove("show")}
+function showToast(t){const e=document.getElementById("toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1600)}
+function esc(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+function openSettings(){renderSettings();document.getElementById("settingsOverlay").classList.add("show")}
+function closeSettings(){document.getElementById("settingsOverlay").classList.remove("show");refreshMasterSelects();render()}
+function renderSettings(){
+ document.getElementById("categorySettings").innerHTML=categories.map((v,i)=>`<div class="setting-row"><input class="icon-input" value="${esc(categoryIcon(v))}" onchange="setCategoryIcon(${i},this.value)"><input class="setting-name" value="${esc(v)}" onchange="renameCategorySetting(${i},this.value)"><button onclick="deleteCategorySetting(${i})">削除</button></div>`).join("");
+ document.getElementById("storeSettings").innerHTML=storeOptions.map((v,i)=>`<div class="setting-row"><input class="icon-input" value="${esc(storeIcon(v))}" onchange="setStoreIcon(${i},this.value)"><input class="setting-name" value="${esc(v)}" ${v==="未設定"?"disabled":""} onchange="renameStoreSetting(${i},this.value)">${v==="未設定"?"":`<button onclick="deleteStoreSetting(${i})">削除</button>`}</div>`).join("");
+}
+function saveMasters(){localStorage.setItem("customCategories",JSON.stringify(categories));localStorage.setItem("customStores",JSON.stringify(storeOptions));localStorage.setItem("categoryIcons",JSON.stringify(categoryIcons));localStorage.setItem("storeIcons",JSON.stringify(storeIcons))}
+function setCategoryIcon(i,v){categoryIcons[categories[i]]=v.trim()||"🏷️";saveMasters();renderSettings()}
+function setStoreIcon(i,v){storeIcons[storeOptions[i]]=v.trim()||"🏪";saveMasters();renderSettings()}
+function renameCategorySetting(i,v){v=v.trim();if(!v)return renderSettings();const old=categories[i];categoryIcons[v]=categoryIcons[old]||"🏷️";delete categoryIcons[old];categories[i]=v;items.forEach(x=>{if(x.category===old)x.category=v});save();saveMasters();renderSettings()}
+function deleteCategorySetting(i){if(categories.length<=1){alert("カテゴリーは1つ以上必要です");return}const old=categories[i];if(!confirm("「"+old+"」を削除しますか？"))return;categories.splice(i,1);delete categoryIcons[old];items.forEach(x=>{if(x.category===old)x.category=categories[0]});save();saveMasters();renderSettings()}
+function addCategorySetting(){const v=prompt("追加するカテゴリー名");if(!v||!v.trim())return;const n=v.trim();if(!categories.includes(n)){categories.push(n);categoryIcons[n]="🏷️"}saveMasters();renderSettings()}
+function renameStoreSetting(i,v){v=v.trim();if(!v)return renderSettings();const old=storeOptions[i];storeIcons[v]=storeIcons[old]||"🏪";delete storeIcons[old];storeOptions[i]=v;items.forEach(x=>{if(x.store===old)x.store=v});Object.values(purchaseState).forEach(p=>{if(p.store===old)p.store=v});save();savePurchase();saveMasters();renderSettings()}
+function deleteStoreSetting(i){const old=storeOptions[i];if(old==="未設定")return;if(!confirm("「"+old+"」を削除しますか？"))return;storeOptions.splice(i,1);delete storeIcons[old];items.forEach(x=>{if(x.store===old)x.store="未設定"});Object.values(purchaseState).forEach(p=>{if(p.store===old)p.store="未設定"});save();savePurchase();saveMasters();renderSettings()}
+function addStoreSetting(){const v=prompt("追加する店舗名");if(!v||!v.trim())return;const n=v.trim();if(!storeOptions.includes(n)){storeOptions.push(n);storeIcons[n]="🏪"}saveMasters();renderSettings()}
+
+refreshMasterSelects();render();
+</script>
+</body>
+</html>
