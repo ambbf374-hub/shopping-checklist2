@@ -498,6 +498,13 @@ input,select{width:100%;padding:12px 13px;border:1px solid var(--line);border-ra
     <div id="storeSettings"></div>
     <button class="setting-add" onclick="addStoreSetting()">＋ 店舗を追加</button>
   </div>
+  <div class="settings-card">
+    <h3>💾 データ保存・バックアップ</h3>
+    <p style="font-size:11px;line-height:1.6;color:var(--muted);margin:0 0 10px">変更内容はこのブラウザに自動保存されています。大切なデータは、ときどきバックアップしておくと安心です。</p>
+    <button class="setting-add" style="width:100%;margin-bottom:7px" onclick="exportBackup()">📤 バックアップを書き出す</button>
+    <button class="setting-add" style="width:100%" onclick="document.getElementById('backupFile').click()">📥 バックアップを読み込む</button>
+    <input id="backupFile" type="file" accept="application/json,.json" style="display:none" onchange="importBackup(this)">
+  </div>
 </div>
 
 <div id="noteOverlay" class="note-overlay">
@@ -669,6 +676,45 @@ function addCategorySetting(){const v=prompt("追加するカテゴリー名");i
 function renameStoreSetting(i,v){v=v.trim();if(!v)return renderSettings();const old=storeOptions[i];storeIcons[v]=storeIcons[old]||"🏪";delete storeIcons[old];storeOptions[i]=v;items.forEach(x=>{if(x.store===old)x.store=v});Object.values(purchaseState).forEach(p=>{if(p.store===old)p.store=v});save();savePurchase();saveMasters();renderSettings()}
 function deleteStoreSetting(i){const old=storeOptions[i];if(old==="未設定")return;if(!confirm("「"+old+"」を削除しますか？"))return;storeOptions.splice(i,1);delete storeIcons[old];items.forEach(x=>{if(x.store===old)x.store="未設定"});Object.values(purchaseState).forEach(p=>{if(p.store===old)p.store="未設定"});save();savePurchase();saveMasters();renderSettings()}
 function addStoreSetting(){const v=prompt("追加する店舗名");if(!v||!v.trim())return;const n=v.trim();if(!storeOptions.includes(n)){storeOptions.push(n);storeIcons[n]="🏪"}saveMasters();renderSettings()}
+
+function exportBackup(){
+ const data={
+  app:"shopping-checklist",version:1,exportedAt:new Date().toISOString(),
+  dailyItems:items,dailyChecks:checks,purchaseState:purchaseState,buySort:buySort,
+  customCategories:categories,customStores:storeOptions,categoryIcons:categoryIcons,
+  storeIcons:storeIcons,collapsedCategories:collapsedCategories
+ };
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+ const a=document.createElement("a");
+ const d=new Date(),pad=n=>String(n).padStart(2,"0");
+ a.href=URL.createObjectURL(blob);
+ a.download=`買い物チェックリスト_バックアップ_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ showToast("バックアップを書き出しました");
+}
+function importBackup(input){
+ const file=input.files&&input.files[0];if(!file)return;
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const d=JSON.parse(reader.result);
+   if(!d||d.app!=="shopping-checklist"||!Array.isArray(d.dailyItems)||!Array.isArray(d.customCategories)||!Array.isArray(d.customStores))throw new Error("invalid");
+   if(!confirm("現在のデータをバックアップの内容に置き換えますか？")){input.value="";return}
+   localStorage.setItem("dailyItems",JSON.stringify(d.dailyItems));
+   localStorage.setItem("dailyChecks",JSON.stringify(d.dailyChecks||{}));
+   localStorage.setItem("purchaseState",JSON.stringify(d.purchaseState||{}));
+   localStorage.setItem("buySort",d.buySort||"store");
+   localStorage.setItem("customCategories",JSON.stringify(d.customCategories));
+   localStorage.setItem("customStores",JSON.stringify(d.customStores));
+   localStorage.setItem("categoryIcons",JSON.stringify(d.categoryIcons||{}));
+   localStorage.setItem("storeIcons",JSON.stringify(d.storeIcons||{}));
+   localStorage.setItem("collapsedCategories",JSON.stringify(d.collapsedCategories||{}));
+   alert("バックアップを読み込みました。画面を更新します。");location.reload();
+  }catch(e){alert("このファイルは買い物チェックリストのバックアップとして読み込めませんでした。");input.value=""}
+ };
+ reader.onerror=()=>{alert("ファイルを読み込めませんでした。");input.value=""};
+ reader.readAsText(file);
+}
 
 refreshMasterSelects();render();
 </script>
